@@ -19,7 +19,7 @@ const authenticate = (req, res, next) => {
 // GET all active leads
 router.get("/", authenticate, async (req, res) => {
     try {
-        const leads = await Lead.find().sort({ createdAt: -1 });
+        const leads = await Lead.find({ createdBy: req.user.username }).sort({ createdAt: -1 });
         res.json(leads);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -48,11 +48,13 @@ router.post("/", authenticate, async (req, res) => {
 router.put("/:id/status", authenticate, async (req, res) => {
     try {
         const { status } = req.body;
-        const lead = await Lead.findByIdAndUpdate(
-            req.params.id,
-            { status },
-            { new: true }
-        );
+        const lead = await Lead.findById(req.params.id);
+        if (!lead) return res.status(404).json({ error: "Lead not found" });
+        if (lead.createdBy !== req.user.username) return res.status(403).json({ error: "Forbidden" });
+
+        lead.status = status;
+        await lead.save();
+
         res.json(lead);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -62,7 +64,11 @@ router.put("/:id/status", authenticate, async (req, res) => {
 // DELETE remove a lead permanently 
 router.delete("/:id", authenticate, async (req, res) => {
     try {
-        await Lead.findByIdAndDelete(req.params.id);
+        const lead = await Lead.findById(req.params.id);
+        if (!lead) return res.status(404).json({ error: "Lead not found" });
+        if (lead.createdBy !== req.user.username) return res.status(403).json({ error: "Forbidden" });
+
+        await lead.remove();
         res.json({ message: "Lead successfully purged" });
     } catch (err) {
         res.status(500).json({ error: err.message });

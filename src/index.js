@@ -294,9 +294,32 @@ io.on("connection", (socket) => {
   /* ---------- HISTORY ---------- */
   socket.on("channel:history", async ({ channelId }) => {
 
-    const messages = await Message.find({ channelId })
-      .sort({ createdAt: 1 })
-      .limit(50);
+    // Get the channel by name if needed
+    let actualChannelId = channelId;
+    if (!mongoose.Types.ObjectId.isValid(channelId)) {
+      const channel = await Channel.findOne({ name: channelId });
+      if (channel) {
+        actualChannelId = channel._id;
+      }
+    }
+
+    // Get the user's join time for this channel
+    const memberRecord = await ChannelMember.findOne({
+      channelId: actualChannelId,
+      userId: socket.user.id
+    });
+
+    let messages = [];
+    
+    if (memberRecord) {
+      // Only show messages sent after the user joined
+      messages = await Message.find({
+        channelId: actualChannelId,
+        createdAt: { $gte: memberRecord.joinedAt }
+      })
+        .sort({ createdAt: 1 })
+        .limit(50);
+    }
 
     const sanitizedMessages = messages.map(m => {
       const msg = m.toObject();
@@ -305,6 +328,16 @@ io.on("connection", (socket) => {
         user: typeof msg.user === "object" ? msg.user.username : msg.user
       };
     });
+
+    // Add welcome message at the start
+    const welcomeMsg = {
+      _id: "welcome-" + Date.now(),
+      channelId,
+      user: "Winden System",
+      text: `Welcome to this channel, ${socket.user.username}! 👋 You're viewing messages from when you joined.`,
+      createdAt: new Date()
+    };
+    sanitizedMessages.unshift(welcomeMsg);
 
     socket.emit("channel:history", sanitizedMessages);
   });
