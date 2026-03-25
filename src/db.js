@@ -1,12 +1,7 @@
 const mongoose = require("mongoose");
 
 const connectDB = async () => {
-    const uri = process.env.MONGO_URI;
-    if (!uri) {
-        console.warn("⚠️  MONGO_URI not set — skipping MongoDB connection (development mode)");
-        return;
-    }
-
+    const uri = process.env.MONGO_URI || "mongodb://localhost:27017/winden";
     try {
         await mongoose.connect(uri);
         console.log("🟢 MongoDB connected");

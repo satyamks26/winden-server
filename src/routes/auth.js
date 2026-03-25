@@ -25,8 +25,13 @@ router.post("/register", async (req, res) => {
                 username: newUser.username,
                 email: newUser.email
             }
-        })
+        });
     } catch (error) {
+        // Native duplication check for unique indices (username/email)
+        if (error.code === 11000) {
+            const field = Object.keys(error.keyValue)[0];
+            return res.status(400).json({ error: `That ${field} is already taken! Please try another one.` });
+        }
         res.status(500).json({ error: error.message });
     }
 });
