@@ -19,6 +19,12 @@ app.use("/api/auth", authRoutes);
 app.use("/api/channels", channelRoutes);
 app.use("/api/leads", leadRoutes);
 
+app.use(cors({
+  origin: 'https://winden-client.vercel.app/login',     // ← Put your exact Vercel frontend URL here
+  credentials: true,                               // Important for cookies/JWT
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 const server = http.createServer(app);
 
 const io = new Server(server, {
