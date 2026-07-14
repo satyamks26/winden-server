@@ -13,23 +13,37 @@ const seedChannels = require("./seedChannel");
 const ChannelMember = require("./models/ChannelMember.js");
 const mongoose = require("mongoose");
 const app = express();
-app.use(cors());
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://winden-client.vercel.app"
+];
+
+if (process.env.CLIENT_URL) {
+  const cleaned = process.env.CLIENT_URL.replace(/\/$/, "").replace(/\/login$/, "");
+  if (!allowedOrigins.includes(cleaned)) {
+    allowedOrigins.push(cleaned);
+  }
+}
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/channels", channelRoutes);
 app.use("/api/leads", leadRoutes);
 
-app.use(cors({
-  origin: 'https://winden-client.vercel.app/login',     // ← Put your exact Vercel frontend URL here
-  credentials: true,                               // Important for cookies/JWT
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: allowedOrigins,
+    credentials: true,
   },
 });
 
